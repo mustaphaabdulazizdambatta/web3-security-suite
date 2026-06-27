@@ -373,7 +373,9 @@ For each pair of state variables that should be coupled (e.g. `totalShares` + `t
 5. No revert guards block the attack before impact ✓/✗
 6. Fix is non-trivial (not already there, just missed) ✓/✗
 7. Impact persists after transaction (or value is extracted) ✓/✗
-8. Not already a known/acknowledged issue ✓/✗
+8. Not already a known/acknowledged issue — check whitepaper, auditor briefs, CLAUDE.md, KNOWN_ISSUES files in the repo (`git log --all --oneline` first to find any context docs) ✓/✗
+9. Unprivileged attacker triggers it (not maker/admin/owner/the one who misconfigured it) ✓/✗
+10. A third party loses real funds — not the person who set the parameters, not just event spam ✓/✗
 
 Finding that fails any gate → demoted to MEDIUM/LOW/INFO.
 
@@ -388,6 +390,29 @@ Same format as AUDIT mode but no parallel agents. Include kill gate results per 
 *Source: hackenproof-public/skills + shuvonsec/claude-bug-bounty*
 
 When the user describes or pastes a vulnerability finding:
+
+### Step 0 — 3-Point Hard Pre-Filter (MANDATORY — run BEFORE writing any PoC or analysis)
+
+Fail **any one** → discard immediately, do not proceed.
+
+1. **Unprivileged attacker triggers it** — the attack must be executable by an external address with no special role (not maker, not admin, not owner, not the one who set the parameters). If the only way to trigger the bug is for the victim to misconfigure their own state → DISCARD.
+
+2. **A third party loses real funds** — tokens stolen, drained, or permanently locked. The victim must be someone *other than* the person who triggered or configured the vulnerable state. Event spam, UI confusion, or "misleading events" without fund loss → DISCARD.
+
+3. **Not a documented trade-off** — check ALL of these before analyzing code:
+   - Project whitepaper / docs
+   - Any auditor brief, KNOWN_ISSUES, or CLAUDE.md in the repo (`git log --all --oneline`, `find . -name "*.md" | xargs grep -l "known\|acknowledged\|by design"`)
+   - Previous audit reports linked in the README
+   - The program's HackenProof scope page exclusions
+   If the behavior is acknowledged → DISCARD.
+
+**What to hunt for instead:**
+- Unprivileged attacker steals / drains / permanently locks a *third party's* funds
+- State corruption that persists and affects real balances for other users
+- Chain-level impact: consensus failures, node crashes, transaction processing halted
+- Protocol assumption violations exploitable by anyone regardless of who set the parameters
+
+**Lesson learned (Aqua audit):** `ship()` multi-call and `dock([])` empty-array were BOTH explicitly documented in the project's auditor brief as "by design / maker awareness required." Both submissions were wasted. Always read the repo docs first.
 
 ### Step 1 — Validate Before Triaging
 
